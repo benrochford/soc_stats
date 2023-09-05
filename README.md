@@ -1,2 +1,2 @@
 # soc_stats
-Assignments for Social Stats course.
+Assignments for Duke Sociology's Social Stats 1 course.
