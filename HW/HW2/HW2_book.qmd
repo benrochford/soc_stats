@@ -1,0 +1,266 @@
+---
+title: "HW2"
+author: "Ben Rochford"
+format: html
+editor: visual
+theme: vapor
+---
+
+https://r4ds.hadley.nz/data-transform
+
+```{r}
+library(tidyverse)
+library(nycflights13)
+data(flights)
+```
+
+## 4.2.5
+
+1.  In a single pipeline for each condition, find all flights that meet the condition:
+
+    -   Had an arrival delay of two or more hours
+
+    -   Flew to Houston (`IAH` or `HOU`)
+
+    -   Were operated by United, American, or Delta
+
+    -   Departed in summer (July, August, and September)
+
+    -   Arrived more than two hours late, but didn't leave late
+
+    -   Were delayed by at least an hour, but made up over 30 minutes in flight
+
+```{r}
+flights |> filter(arr_delay >= 120)
+```
+
+```{r}
+flights |> filter(dest %in% c("IAH", "HOU"))
+```
+
+```{r}
+flights |> filter(carrier %in% c("UA", "AA", "DL"))
+```
+
+```{r}
+flights |> filter(month %in% c(7,8,9))
+```
+
+```{r}
+flights |> filter(dep_delay <= 0 & arr_delay >= 120)
+```
+
+```{r}
+flights |> filter(dep_delay >= 60 & (sched_arr_time - arr_time) > 30)
+```
+
+2.  Sort `flights` to find the flights with longest departure delays.
+
+```{r}
+flights |> arrange(desc(dep_delay))
+```
+
+Find the flights that left earliest in the morning
+
+```{r}
+flights |> arrange(dep_time)
+```
+
+3.  Sort flights to find the fastest flights.
+
+```{r}
+flights |> arrange(desc(distance/air_time))
+```
+
+4.  Was there a flight on every day of 2013?
+
+```{r}
+flights |> distinct(month, day)
+```
+
+Yes, since there are 365 rows in the output above.
+
+5.  Which flights traveled the farthest distance? Which traveled the least distance?
+
+```{r}
+flights |> arrange(desc(distance))
+flights |> arrange(distance)
+```
+
+6.  Does it matter what order you used [`filter()`](https://dplyr.tidyverse.org/reference/filter.html) and [`arrange()`](https://dplyr.tidyverse.org/reference/arrange.html) if you're using both? Why/why not? Think about the results and how much work the functions would have to do.
+
+Filter: removes rows leaving only rows that fit a certain condition.
+
+Arrange: sorts rows without removing them according to a certain condition.
+
+In certain scenarios, we could get different results if we ran these two commands in different orders. If we sort first, then filter out rows that were relevant to our sort, the order will not be the same than if we filtered first.
+
+## 4.3.5
+
+1.  Compare `dep_time`, `sched_dep_time`, and `dep_delay`. How would you expect those three numbers to be related?
+
+    I would imagine that `dep_delay = dep_time - sched_dep_time`.\
+
+2.  Brainstorm as many ways as possible to select `dep_time`, `dep_delay`, `arr_time`, and `arr_delay` from `flights`.
+
+    Plain `select(x,y,z)`, between like `select(x:z)`, exclusionary like `select(!all but xyz)`, use `contains("dep")` as a param, use `matches()` and regex for dep.\
+
+3.  What happens if you specify the name of the same variable multiple times in a [`select()`](https://dplyr.tidyverse.org/reference/select.html) call?
+
+    It will add duplicative output columns for the variable.\
+
+4.  What does the [`any_of()`](https://tidyselect.r-lib.org/reference/all_of.html) function do? Why might it be helpful in conjunction with this vector?
+
+    ```         
+    variables <- c("year", "month", "day", "dep_delay", "arr_delay")
+    ```
+
+    `any_of()` is a functional param for select. We can pass it that list of variables and it will get them all, so this way we can make a variable input rather than a statically-typed one.\
+
+5.  Does the result of running the following code surprise you? How do the select helpers deal with upper and lower case by default? How can you change that default?
+
+    ```         
+    flights |> select(contains("TIME"))
+    ```
+
+    Result is all rows with columns with name containing time, not too surprising. Case is ignored, we can pass another param to contains to strictly address case.\
+
+6.  Rename `air_time` to `air_time_min` to indicate units of measurement and move it to the beginning of the data frame.
+
+    ```{r}
+    flights |> 
+      rename(air_time_min = air_time) |> 
+      relocate(air_time_min)
+    ```
+
+7.  Why doesn't the following work, and what does the error mean?
+
+    ```         
+    flights |> 
+      select(tailnum) |> 
+      arrange(arr_delay)
+    #> Error in `arrange()`:
+    #> ℹ In argument: `..1 = arr_delay`.
+    #> Caused by error:
+    #> ! object 'arr_delay' not found
+    ```
+
+    It doesn't work because after the select command runs, there is only tailnum in the dataframe in the pipeline. It can't see a column that doesn't exist.
+
+## 4.5.7
+
+1.  Which carrier has the worst average delays? Challenge: can you disentangle the effects of bad airports vs. bad carriers? Why/why not? (Hint: think about `flights |> group_by(carrier, dest) |> summarize(n())`)
+
+    ```{r}
+    flights |> 
+      group_by(carrier) |> 
+      summarise(delay = mean(dep_delay, na.rm = TRUE)) |> 
+      arrange(desc(delay))
+
+    flights |> 
+      group_by(carrier, dest) |> 
+      summarise(delay = mean(dep_delay, na.rm = TRUE)) |> 
+      group_by(dest) |> 
+      arrange(desc(delay))
+      
+    ```
+
+    Not really possible to compare some airlines, because they don't all go to the same airlines
+
+2.  Find the flights that are most delayed upon departure from each destination.
+
+    ```{r}
+    flights |> 
+      group_by(dest) |> 
+      slice_max(dep_delay) |> 
+      relocate(dest, dep_delay)
+    ```
+
+3.  How do delays vary over the course of the day. Illustrate your answer with a plot.
+
+    ```{r}
+    flights |> 
+      group_by(hour) |> 
+      summarise(avg_delay = mean(dep_delay, na.rm = TRUE)) |> 
+      ggplot(aes(x=hour, y=avg_delay)) + geom_point() + xlim(5,24)
+    ```
+
+4.  What happens if you supply a negative `n` to [`slice_min()`](https://dplyr.tidyverse.org/reference/slice.html) and friends?
+
+    "A negative value of `n` or `prop` will be subtracted from the group size. For example, `n = -2` with a group of 5 rows will select 5 - 2 = 3 rows"\
+
+5.  Explain what [`count()`](https://dplyr.tidyverse.org/reference/count.html) does in terms of the dplyr verbs you just learned. What does the `sort` argument to [`count()`](https://dplyr.tidyverse.org/reference/count.html) do?
+
+    It's shorthand for grouping on a variable and then counting the number of entries. `sort`, if true, shows the largest counts at the top of the output.\
+
+6.  Suppose we have the following tiny data frame:
+
+    ```         
+    df <- tibble(
+      x = 1:5,
+      y = c("a", "b", "a", "a", "b"),
+      z = c("K", "K", "L", "L", "K")
+    )
+    ```
+
+    a.  Write down what you think the output will look like, then check if you were correct, and describe what [`group_by()`](https://dplyr.tidyverse.org/reference/group_by.html) does.
+
+        ```         
+        df |>
+          group_by(y)
+        ```
+
+        Output will be the same tibble, but with info about grouping on y. Two groups will be established - one for a and one for b.\
+
+    b.  Write down what you think the output will look like, then check if you were correct, and describe what [`arrange()`](https://dplyr.tidyverse.org/reference/arrange.html) does. Also comment on how it\'s different from the [`group_by()`](https://dplyr.tidyverse.org/reference/group_by.html) in part (a)?
+
+        ```         
+        df |>
+          arrange(y)
+        ```
+
+        It will sort itself based on the y col, so the a rows will be higher than the b rows. Arrange sorts the rows by a given col's values.\
+
+    c.  Write down what you think the output will look like, then check if you were correct, and describe what the pipeline does.
+
+        ```         
+        df |>
+          group_by(y) |>
+          summarize(mean_x = mean(x))
+        ```
+
+        Output will be two rows with 2 columns. The columns will be y val, and mean val for grouped x on y (a or b). It groups on the values of y, and then does a mean of the x.\
+
+    d.  Write down what you think the output will look like, then check if you were correct, and describe what the pipeline does. Then, comment on what the message says.
+
+        ```         
+        df |>
+          group_by(y, z) |>
+          summarize(mean_x = mean(x))
+        ```
+
+        This will find unique pairings of y and z pairings and then provide a mean of the x values corresponding to each. It does what I said it did.\
+
+    e.  Write down what you think the output will look like, then check if you were correct, and describe what the pipeline does. How is the output different from the one in part (d).
+
+        ```         
+        df |>
+          group_by(y, z) |>
+          summarize(mean_x = mean(x), .groups = "drop")
+        ```
+
+        It's gonna do the same thing. The only difference is that it threw away the grouping.\
+
+    f.  Write down what you think the outputs will look like, then check if you were correct, and describe what each pipeline does. How are the outputs of the two pipelines different?
+
+        ```         
+        df |>
+          group_by(y, z) |>
+          summarize(mean_x = mean(x))
+
+        df |>
+          group_by(y, z) |>
+          mutate(mean_x = mean(x))
+        ```
+
+        First one is identical to the ones we discussed in part d. Second one adds a column to the grouped dataset that displays the mean value same as the first, but in the context of the original table.
