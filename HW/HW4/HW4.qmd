@@ -1,0 +1,130 @@
+---
+title: "HW4"
+author: "Ben Rochford"
+format: html
+theme: vapor
+editor: visual
+---
+
+Setup:
+
+```{r}
+library(tidyverse)
+theme_set(theme_light(base_family = "Avenir Next Condensed"))
+```
+
+## 4.1
+
+```{r}
+x <- rnorm(100000, mean = 0, sd = 1)
+mean_x <- mean(x)
+sd_x <- sd(x)
+mean_x
+sd_x
+```
+
+Verify:
+
+-   The probability x is within one standard deviation away from the mean is roughly 68%
+
+```{r}
+within_sd <- x[x >= mean_x - sd_x & x <= mean_x + sd_x]
+length(within_sd) / length(x)
+```
+
+-   The probability x is within two standard deviations away from the mean is roughly 95%
+
+```{r}
+within_sd <- x[x >= mean_x - 2*sd_x & x <= mean_x + 2*sd_x]
+length(within_sd) / length(x)
+```
+
+-   The probability x is above the mean is 50%.
+
+```{r}
+abv_mean <- x[x > mean_x]
+length(abv_mean) / length(x)
+```
+
+-   The probability x is below the mean is also 50%.
+
+```{r}
+abv_mean <- x[x < mean_x]
+length(abv_mean) / length(x)
+```
+
+## 4.2
+
+```{r}
+quantile(x)
+```
+
+`quantile()` displays the values from x at each sample quantile. The lowest value of x corresponds to 0 and the highest value of x corresponds to 100.
+
+## 4.3
+
+```{r}
+quantile(x, probs=c(0.005,0.995))
+```
+
+## 4.4
+
+```{r}
+betw_check <- x[x < 2.576 & x > -2.576]
+length(betw_check) / length(x)
+```
+
+## 4.5
+
+```{r}
+sims <- tibble(trial = 1:1000) |> 
+  rowwise() |> 
+  mutate(sum_20 = sum(runif(n = 20, min = 0, max = 1)))
+
+ggplot(sims, aes(x=sum_20)) +
+  geom_histogram(fill="purple", alpha=0.5)
+```
+
+Standard error:
+
+```{r}
+sd(sims$sum_20)  # Literal standard error
+sqrt(20/12)  # Formula standard error
+```
+
+## 4.6
+
+Generally 30 is enough samples to start seeing the inherent standard random distribution of values inherent to a random trial.
+
+```{r}
+# last time from GSS we got ~.33 estimate of the proportion conservative
+# how confident should we be in this estimate?
+
+# set up simulation "dresser"
+set.seed(123)
+est_prop <- .33
+num_sims <- 10000 # how many do I want to do?
+svy_size <- 30  # number of people in each "poll" SWITCHED TO 30
+
+sims <- tibble(sim_num = 1:num_sims) |> 
+  uncount(svy_size)
+
+# do the sims
+sims <- sims |> 
+  mutate(conservative = rbinom(num_sims*svy_size, 1, est_prop)) |> 
+  group_by(sim_num) |> 
+  summarize(prop = mean(conservative))
+
+std_error <- sqrt((1/3) * (2/3) / svy_size)
+2*std_error  # 95% CI should be ~2 standard errors from 0.33
+
+lower_bound95 <- quantile(sims$prop, .05)
+upper_bound95 <- quantile(sims$prop, .95)
+ci95 <- c(lower_bound95, upper_bound95)
+ci95
+c(.33 - 2*std_error, .33 + 2*std_error)
+```
+
+If we reduce the `svy_size` to 30, we can see that the 95% CI is not very close to 2 standard errors from .33 any more. Re-running with values `svy_size`s that approach 1000 it gets much closer.
+
+While I never assumed such a small n as 30 would give us good results, I now understand why in a bit more detail.
