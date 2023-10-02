@@ -1,0 +1,158 @@
+---
+title: "HW5"
+author: "Ben Rochford"
+format: html
+theme: vapor
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(ggthemes)
+theme_set(theme_few(base_family = "Avenir Next Condensed"))
+```
+
+## 5.2.1
+
+$Pr(X=x)$
+
+```{r}
+dbinom(1, 1, .2)  # x = 1 -> 0.2
+dbinom(0, 1, .2)  # x = 0 -> 1-0.2
+dbinom(2, 1, .2)  # x = anything else -> 0
+```
+
+$Pr(X\leq x)$
+
+```{r}
+pbinom(-1, 1, .2) # x < 0 -> 0
+pbinom(0, 1, .2)  # x = 0 -> 1-0.2
+pbinom(1, 1, .2)  # x = 1 -> 1
+pbinom(2, 1, .2)  # x > 1 -> 1
+```
+
+generate 100 samples from the Bernouilli distribution with `prob = 2/3`
+
+```{r}
+samps <- tibble(
+  sample = rbinom(100, 1, 2/3)
+)
+ggplot(samps, aes(x=sample)) + geom_bar(fill="steelblue")
+```
+
+## 5.3.1
+
+Draw the sample space for flipping a coin 4 times
+
+$\Omega= \{{HHHH, HHHT, HHTH, HHTT, HTHH, HTHT, HTTH, HTTT,}$
+
+${THHH, THHT, THTH, THTT, TTHH, TTHT, TTTH, TTTT}\}$
+
+## 5.3.2
+
+Turn the sample space into a random variable that counts the number of heads in each event.
+
+$$
+\Pr(X_4 = x) = \begin{cases}
+    1/16 &\text{if} \ x = 0 \\
+    4/16 &\text{if} \ x = 1 \\
+    6/16 &\text{if} \ x = 2 \\
+    4/16 &\text{if} \ x = 3 \\
+    1/16 &\text{if} \ x = 4 \\
+    0 &\text{if} \ x < 0 \text{ or } x>4
+\end{cases}
+$$
+
+Using R functions: find the probability that X_4 = 2, and find the probability that X_4 \<= 1
+
+```{r}
+dbinom(2, 4, 0.5)  # 6/16 = 0.375
+pbinom(1, 4, 0.5)  # 1/16 + 4/16 = 5/16 = 0.3125
+```
+
+## 5.3.3
+
+```{r}
+samps_5 <- tibble(
+  sample = rbinom(1000, 5, 2/3)
+)
+ggplot(samps_5, aes(x=sample)) + geom_bar(fill="steelblue")
+```
+
+Estimate the probability that X is an even number:
+
+```{r}
+length(samps_5$sample[samps_5$sample %% 2 == 0])  # evens
+length(samps_5$sample)                            # all
+
+length(samps_5$sample[samps_5$sample %% 2 == 0]) / length(samps_5$sample)
+```
+
+## 5.3.5
+
+What's the probability that X = 2 when p = 1/3 and n = 4?
+
+$6*(1/3 * 1/3 * 2/3 * 2/3) = 0.296$
+
+```{r}
+dbinom(2, 4, 1/3)
+```
+
+## 5.3.7
+
+p = 2/3 and n = 15.
+
+Verify probability mass:
+
+$\Pr(X = x) = {n \choose x} p^x (1-p)^{n-x}$
+
+using `dbinom()`
+
+```{r}
+my_dibby <- function(x, n, p) {  # my implementation
+  choose(n,x) * (p**x) * (1-p)**(n-x)
+}
+
+my_dibby(seq(-1,16), 15, 2/3)
+print("---")
+dbinom(seq(-1,16), 15, 2/3)
+```
+
+Verify cumulative distribution:
+
+$\Pr(X \leq x) = \sum_{i = 0}^x {n \choose x} p^x (1-p)^{n-x}$
+
+using `pbinom()`
+
+```{r}
+my_pibby <- function(x, n, p) {  # my implementation
+  cumsum(my_dibby(seq(-1,x), n, p))
+}
+
+my_pibby(16, 15, 2/3)
+print("---")
+pbinom(seq(-1,16), 15, 2/3)
+```
+
+Matchy matchy.
+
+## 5.4.1
+
+Add `clike_raw` and `clike_normalized`
+
+```{r}
+grid <- tibble(prob = seq(0, 1, by = 0.001))
+grid$like <- dbinom(21, 47, grid$prob)
+
+grid <- grid |>  # make additions...
+  mutate(clike_raw = cumsum(like),
+         clike_normalized = clike_raw / sum(like))
+```
+
+What are the chances that `prob` is equal to or greater than 0.588?
+
+```{r}
+grid |> filter(prob == .588)
+```
+
+It's a 97.5% chance that `prob` is equal to or greater than .588, according to our `clike_normalized` field.
