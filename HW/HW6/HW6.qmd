@@ -1,0 +1,221 @@
+---
+title: "HW6"
+author: "Ben Rochford"
+format: html
+editor: visual
+---
+
+set-up:
+
+```{r}
+library(tidyverse, warn.conflicts = F)
+library(infer)
+library(janitor) ## for convenient "table" functions
+library(gssr)    ## for access to GSS data
+library(ggthemes)
+theme_set(theme_few(base_family = "Optima")) 
+```
+
+## 6.1.2
+
+How many people do we need in a poll for there to be a standard error less than 5%?
+
+```{r}
+demprop <- 0.53
+
+std_errs <- tibble(
+  num = 1:1000,
+  std_err = sqrt((demprop*(1-demprop))/num)
+)
+
+std_errs |> filter(std_err <= 0.05) |> head()
+```
+
+-   Looks like we need 100 people minimum to have a standard error less than 5%.
+
+## 6.1.5
+
+What's the probability of observing the true p = 0.53 value under the null (p = 0.5)?
+
+```{r}
+S <- 1e7 ## number of simulated draws
+poll_size <- 1000 ## sample size
+
+draws <- rbinom(S, size = poll_size, prob = 0.50)
+null <- draws / poll_size
+
+sum(null == 0.53) / length(null)
+```
+
+-   Based on this analysis, the probability is \~0.417%
+
+What's the probability of observing `prop_hat` under the null? Is this significant at alpha=.05?
+
+```{r}
+prophats <- tibble(  # simulate 1000 phats under p=0.5
+  id = 1:1000,
+) |> rowwise() |> mutate(p_hat= mean(rbinom(poll_size, size = 1, prob = 0.5)))
+
+sum(prophats$p_hat == 0.53) / length(prophats$p_hat)  # find the probability of seeing the real p-hat
+```
+
+looks like the probability of observing prop_hat is \~ the same as the probability of observing the true value. It is significant at alpha = .05 because prop_hat is \< .05.
+
+## 6.1.7
+
+Verify that the formulaic standard error of a difference in proportions equals `sd()`.
+
+first, let's check `sd(theta_distribution)`:
+
+```{r}
+p1 <- 0.5
+n1 <- 120
+p2 <- 0.6
+n2 <- 90
+
+S <- 1e5
+draws1 <- rbinom(S, size = n1, prob = p1) 
+proportions1 <- draws1 / n1 
+draws2 <- rbinom(S, size = n2, prob = p2)
+proportions2 <- draws2 / n2
+theta_distribution <- proportions1 - proportions2
+sd(theta_distribution)
+```
+
+now the formula:
+
+```{r}
+sqrt((p1*(1-p1)/n1)+(p2*(1-p2)/n2))
+```
+
+epic
+
+## 6.1.8
+
+Whats the standard error in an experiment with two groups of 500 where p1=.5 and p2=.4?
+
+-   (this is average treatment effect)
+
+```{r}
+sqrt((.5*(1-.5)/500)+(.4*(1-.4)/500))
+
+```
+
+## 6.2.1
+
+```{r}
+gss18 <- gss_get_yr(2018) 
+
+d <- gss18 |> 
+  select(sex, attend, polviews) |> 
+  haven::zap_missing() |> 
+  mutate(sex = as_factor(sex)) |> 
+  haven::zap_labels() |> 
+  drop_na()
+
+glimpse(d)
+```
+
+Describe the GSS `attend` and `polviews` fields:
+
+-   `attend` is an individual's self-reported metric of how often they attend religious services
+
+-   `polviews` measures the extent to which one thinks of themselves as liberal or conservative.
+
+    -   Responding with a 4 indicates the individual views themselves as moderate
+
+## 6.2.2
+
+```{r}
+d_cons <- d |> 
+  mutate(conservative = as.integer(polviews > 4), 
+         weekly = as.integer(attend >= 7), 
+         conservative_fct = factor(conservative, levels = c(0, 1), 
+                                   labels = c("Non-Conservative","Conservative"))
+         )
+
+head(d_cons)
+```
+
+```{r}
+# cross-tab
+d_cons |> 
+  tabyl(conservative, weekly) |> 
+  adorn_percentages("row") |>
+  adorn_pct_formatting(digits = 2) |> 
+  adorn_ns()
+
+# picture
+d_cons |> 
+  group_by(conservative) |> 
+  summarize(attend_weekly_pct = mean(weekly)*100) |> 
+  ggplot(aes(x = conservative,
+             y = attend_weekly_pct,
+             fill = conservative)) +
+  geom_col() +
+  coord_flip()
+```
+
+## 6.2.3
+
+Is the difference in proportions between `conservative` and `weekly` statistically significant?
+
+```{r}
+n_rows <- length(d_cons$conservative)
+p_cons <- sum(d_cons$conservative) / n_rows
+p_weekly <- sum(d_cons$weekly) / n_rows
+
+p_cons - p_weekly
+```
+
+```{r}
+boot_dist <- d_cons |> 
+  specify(weekly ~ conservative_fct) |> 
+  generate(reps = 1000, type = "bootstrap") |> 
+  calculate(stat = "diff in means", order = c("Non-Conservative","Conservative"))
+
+ci <- boot_dist |> get_confidence_interval(level=.95)
+
+boot_dist |> visualize() + shade_ci(ci)
+
+# hypothesis testing
+obs_diff <- mean(d_cons$weekly[d_cons$conservative==1]) - 
+  mean(d_cons$weekly[d_cons$conservative==0])
+obs_diff
+
+# create null distribution
+null_dist <- d_cons |> 
+  specify(weekly ~ conservative_fct) |> 
+  hypothesize(null = "independence") |> 
+  generate(reps = 1000, type = "permute") |> 
+  calculate(stat = "diff in means", order = c("Non-Conservative","Conservative")) 
+
+null_dist |> get_p_value(obs_diff, direction = "both")
+
+null_dist |> visualize() + shade_p_value(obs_diff, direction = "both")
+```
+
+Based on the hypothesis test, the difference in proportions here is statistically significant.
+
+## 6.2.4
+
+From the tile tables, we notice a few things.
+
+The first graph is raw counts of each polview / attend pair in the responses. Here, we see that the most common type of individual surveyed was a political moderate who never goes to church.
+
+The second graph is percentages representing the attend variable for each polview. In the middle graph, we can see that liberals are generally more likely never to go to church, and conservatives are generally more likely. Not many people of any political walk are likely to go more than once.
+
+In the third graph is percentages representing the polview variable for each attend level. Here, we can see that people are generally moderate, but if they tend to never go to church they are more likely to be strong liberals, and if they tend to go to church a lot, they tend to be stronger conservative.
+
+## 6.2.5
+
+```{r}
+d |> 
+  mutate(polviews = as_factor(polviews), attend = as_factor(attend)) |> 
+  specify(response = polviews, explanatory = attend) |> 
+  hypothesize(null = "independence") |> 
+  generate(reps = 1000, type = "permute") |> 
+  calculate(stat = "Chisq")
+
+chisq.test(table(d$polviews, d$attend))
+```
