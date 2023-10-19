@@ -1,0 +1,279 @@
+---
+title: "HW7"
+author: "Ben Rochford"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse, warn.conflicts = FALSE)
+library(infer)
+library(janitor) ## for convenient "table" functions
+library(gssr)    ## for access to GSS data
+library(ggthemes)
+theme_set(theme_few(base_family = "Optima")) 
+```
+
+## 7.1.1
+
+Load 2018 GSS data
+
+```{r}
+library(tidyverse)
+library(gssr)
+gss18 <- gss_get_yr(2018) 
+
+d <- gss18 |> 
+  select(attend, polviews) |> 
+  haven::zap_missing() |> 
+  haven::zap_labels() |> 
+  mutate(weekly = if_else(attend >= 7, 1L, 0L),
+         conservative = if_else(polviews >= 5, 1L, 0L)) |> 
+  drop_na()
+```
+
+```{r}
+table(conservative = d$conservative, weekly = d$weekly)
+```
+
+1.  What is the probability that a person attends religious services weekly?\
+    ... and
+2.  What is the probability that a person does not attend religious services weekly?
+
+reorganize a bit like we did in class:
+
+```{r}
+d <- d |> mutate(weekly = if_else(attend >= 7, 1L, 0L),
+          attends = if_else(weekly == 1,"Weekly","Not Weekly"),
+          conservative = if_else(polviews >= 5, 1L, 0L),
+          polview_chr = if_else(conservative==1,"Conservative","Not Conservative")) |> relocate(attends,weekly,polview_chr,conservative)
+```
+
+```{r}
+tabyl(d, weekly)
+```
+
+1: Pr(W) = 22.237%, and 2: Pr(W\^c) = 77.763
+
+3.  What is the probability a person is conservative, given they attend religious services weekly?
+
+```{r}
+tabyl(d, attends, polview_chr) |> 
+  adorn_percentages(denominator = "row")
+```
+
+Pr(C \| W) = 48.29%
+
+4.  Probability person attends weekly given conservative?
+
+```{r}
+tabyl(d, attends, polview_chr) |> 
+  adorn_percentages(denominator = "col")
+```
+
+Pr(W \| C) = 32.65%
+
+5.  Probability someone is conservative given they don't attend weekly?
+
+Pr(C \| W\^c) = 28.48%
+
+6.  Probability someone attends weekly and is conservative?
+
+```{r}
+tabyl(d, attends, polview_chr) |> 
+  adorn_percentages(denominator = "all")
+```
+
+Pr(W and C) = 10.74%
+
+7.  Probability someone doesn't attend weekly and they are not conservative?
+
+Pr(W\^c and C\^c) = 55.62%
+
+8.  Assuming W and C are independent, what is the joint probability of W and C?
+
+```{r}
+tabyl(d, polview_chr)
+```
+
+$Pr(W) * Pr(C) = 22.237\%*32.89\% = 7.313\%$
+
+## 7.1.2
+
+```{r}
+d2 <- gss18 |> 
+  select(astrosci, condrift) |> 
+  haven::zap_missing() |> 
+  haven::zap_labels() |> 
+  drop_na() |> 
+  mutate(astro_believe = if_else(astrosci == 1, 1L, 0L),
+         astro_believe_chr = if_else(astrosci == 1, "Believes Astrology", "No Astrology"),
+         condrift_believe = if_else(condrift == 1, 1L, 0L),
+         condrift_believe_chr = if_else(condrift == 1, "Believes Continents Move", "No Continents Move")) |>
+  relocate(astro_believe,astro_believe_chr,condrift_believe,condrift_believe_chr)
+```
+
+```{r}
+table(astro_believe = d2$astro_believe, condrift_believe = d2$condrift_believe)
+```
+
+1.  What is the probability that a person believes in astrology?\
+    ... and
+2.  What is the probability that a person does not believe in astrology?
+
+```{r}
+tabyl(d2, astro_believe_chr)
+```
+
+1: Pr(A) = 6.73%, and 2: Pr(A\^c) = 93.27%
+
+3.  What is the probability a person believes continental drift, given they believe in astrology?
+
+```{r}
+tabyl(d2, astro_believe_chr, condrift_believe_chr) |> 
+  adorn_percentages(denominator = "row")
+```
+
+Pr(D \| A) = 80%
+
+4.  Probability person believes in astrology given they believe continental drift?
+
+```{r}
+tabyl(d2, astro_believe_chr, condrift_believe_chr) |> 
+  adorn_percentages(denominator = "col")
+```
+
+Pr(A \| D) = 6.2%
+
+5.  Probability someone believes continental drift given they don't believe in astrology?
+
+Pr(D \| A\^c) = 87.32%
+
+6.  Probability someone believes in astrology and continental drift?
+
+```{r}
+tabyl(d2, astro_believe_chr, condrift_believe_chr) |> 
+  adorn_percentages(denominator = "all")
+```
+
+Pr(A and D) = 5.38%
+
+7.  Probability someone doesn't believe in astrology and they don't believe in continental drift?
+
+Pr(A\^c and D\^c) = 11.83%
+
+8.  Assuming A and D are independent, what is the joint probability of A and D?
+
+```{r}
+tabyl(d2, condrift_believe_chr)
+```
+
+$Pr(A) * Pr(D) = 6.73\%* 86.83\% = 5.84\%$
+
+## 7.2.1
+
+```{r}
+# Values from contingency tables considered earlier
+pr_w_given_c <- .3265
+pr_w_given_not_c <- .1713
+
+# 1. Difference in Probabilities
+pr_w_given_c - pr_w_given_not_c
+
+# 2. Relative Risk Ratio
+pr_w_given_c / pr_w_given_not_c
+
+# 3. Odds Ratio
+odds_w_c <- pr_w_given_c / (1 - pr_w_given_c)
+odds_w_not_c <- pr_w_given_not_c / (1 - pr_w_given_not_c)
+odds_w_c / odds_w_not_c
+
+# 4. Log Odds Ratio
+log(odds_w_c / odds_w_not_c)
+```
+
+## 7.2.2
+
+```{r}
+boot_risk <- d |> 
+  mutate(conservative_cat = if_else(conservative == 1L, "conservative", "other")) |> 
+  mutate(weekly_cat = if_else(weekly == 1L, "weekly", "not_weekly")) |> 
+  specify(weekly_cat ~ conservative_cat, success="weekly") |> 
+  generate(reps = 1e4, type = "bootstrap") |> 
+  calculate(stat = "ratio of props", order = c("conservative", "other"))
+
+ci_risk <- get_confidence_interval(boot_risk)
+
+boot_risk |> 
+  visualize() +
+  shade_ci(ci_risk)+
+  ggtitle("Relative Risk Ratio of Pr(W | C), Pr(W | C^c)")
+```
+
+```{r}
+boot_odds <- d |> 
+  mutate(conservative_cat = if_else(conservative == 1L, "conservative", "other")) |> 
+  mutate(weekly_cat = if_else(weekly == 1L, "weekly", "not_weekly")) |> 
+  specify(weekly_cat ~ conservative_cat, success="weekly") |> 
+  generate(reps = 1e4, type = "bootstrap") |> 
+  calculate(stat = "odds ratio", order = c("conservative", "other"))
+
+ci_odds <- get_confidence_interval(boot_odds)
+
+boot_odds |> 
+  visualize() +
+  shade_ci(ci_odds)+
+  ggtitle("Odds Ratio of Pr(W | C), Pr(W | C^c)")
+```
+
+## 7.2.3
+
+```{r}
+# Values from contingency tables considered earlier
+pr_a_given_d <- .062
+pr_a_given_not_d <- .8978
+
+# 1. Difference in Probabilities
+pr_a_given_d - pr_a_given_not_d
+
+# 2. Relative Risk Ratio
+pr_a_given_d / pr_a_given_not_d
+
+# 3. Odds Ratio
+odds_a_d <- pr_a_given_d / (1 - pr_a_given_d)
+odds_a_not_d <- pr_a_given_not_d / (1 - pr_a_given_not_d)
+odds_a_d / odds_a_not_d
+
+# 4. Log Odds Ratio
+log(odds_a_d / odds_a_not_d)
+```
+
+## 7.2.4
+
+```{r}
+boot_risk_2 <- d2 |> 
+  specify(astro_believe_chr ~ condrift_believe_chr, success="Believes Astrology") |> 
+  generate(reps = 1e4, type = "bootstrap") |> 
+  calculate(stat = "ratio of props", order = c("Believes Continents Move", "No Continents Move"))
+
+ci_risk_2 <- get_confidence_interval(boot_risk_2)
+
+boot_risk_2 |> 
+  visualize() +
+  shade_ci(ci_risk_2)+
+  ggtitle("Relative Risk Ratio of Pr(A | D), Pr(A | D^c)")
+```
+
+```{r}
+boot_odds_2 <- d2 |> 
+  specify(astro_believe_chr ~ condrift_believe_chr, success="Believes Astrology") |> 
+  generate(reps = 1e4, type = "bootstrap") |> 
+  calculate(stat = "odds ratio", order = c("Believes Continents Move", "No Continents Move"))
+
+ci_odds_2 <- get_confidence_interval(boot_odds_2)
+
+boot_odds_2 |> 
+  visualize() +
+  shade_ci(ci_odds_2)+
+  ggtitle("Odds Ratio of Pr(A | D), Pr(A | D^c)")
+```
