@@ -1,0 +1,294 @@
+---
+title: "HW8"
+author: "Ben Rochford"
+format: html
+editor: visual
+---
+
+```{r}
+#| echo: false
+#| results: hide
+#| include: false
+library(conflicted)
+conflicts_prefer(dplyr::filter)
+library(tidyverse)
+library(infer)
+library(janitor)
+library(gssr)
+```
+
+## Importing GSS variables
+
+```{r}
+gss18 <- gss_get_yr(2018)
+```
+
+```{r}
+alpha_beta <- function(d, X, Y) {
+  tbl <- tabyl(d, {{X}}, {{Y}}) |> adorn_totals(c("row", "col"))
+  n00 <- tbl[[2]][1]
+  n01 <- tbl[[3]][1]
+  n10 <- tbl[[2]][2]
+  n11 <- tbl[[3]][2]
+  print(tbl)
+  
+  pr_y1_gx0 = n10 / (n10 + n00)
+  pr_y1_gx1 = (n11 / (n11 + n01))
+  
+  linear_alpha <- pr_y1_gx0
+  linear_beta <- pr_y1_gx1 - linear_alpha
+  
+  log_alpha <- log(pr_y1_gx0 / (1 - pr_y1_gx0))
+  log_beta <- log(pr_y1_gx1 / (1 - pr_y1_gx1)) - log_alpha
+  
+  cat("\nLinear alpha:", linear_alpha, "\n")
+  cat("Linear beta:", linear_beta, "\n")
+  cat(sprintf("p = %.3f + %.3fx\n", linear_alpha, linear_beta), "\n")
+  
+  cat("Logistic alpha:", log_alpha, "\n")
+  cat("Logistic beta:", log_beta, "\n")
+  cat(sprintf("logit(p) = %.3f + %.3fx\n", log_alpha, log_beta))
+}
+```
+
+*(The titles are meant to be sassy and not literally descriptive)*
+
+## Model 1: Being Alright With Cheating and Belief in a Higher Power
+
+X: Thinking sex with someone other than one's spouse is wrong only sometimes or not at all
+
+-   1: not wrong at all or wrong only sometimes
+
+-   0: always wrong, almost always wrong
+
+Y: Believing in a higher power
+
+-   1: Believes
+
+-   0: Doesn't believe
+
+```{r}
+d1 <- gss18 |> 
+  select(god, xmarsex) |> 
+  haven::zap_missing() |> 
+  haven::zap_labels() |> 
+  mutate(believe = if_else(god >= 3, 1L, 0L),
+         cheating_cool = if_else(xmarsex >= 3, 1L, 0L)) |> 
+  drop_na()
+
+alpha_beta(d1, cheating_cool, believe)
+```
+
+Linear model: $\beta$ indicates that those who believe in a higher power, compared to those who don't, are 19.7 percentage points less likely to feel that sex with non spouse is not wrong or wrong only sometimes
+
+Logistic model: $\beta$ indicates that those who believe in a higher power, compared to those who don't, have a 1.458 lower log odds of feeling that sex with non spouse is not wrong or wrong only sometimes
+
+## Model 2: Being Alright With Cheating and Being Female
+
+X: Thinking sex with someone other than one's spouse is wrong only sometimes or not at all
+
+-   1: not wrong at all or wrong only sometimes
+
+-   0: always wrong, almost always wrong
+
+Y: Female
+
+-   1: identifies as female
+
+-   0: identifies as male
+
+```{r}
+d2 <- gss18 |> 
+  select(sex, xmarsex) |> 
+  haven::zap_missing() |> 
+  haven::zap_labels() |> 
+  mutate(female = if_else(sex == 2, 1L, 0L),
+         cheating_cool = if_else(xmarsex >= 3 & xmarsex < 8, 1L, 0L)) |> 
+  drop_na()
+
+alpha_beta(d2, cheating_cool, female)
+```
+
+Linear model: $\beta$ indicates that those who identify as female, compared to those who don't, are 3.3 percentage points less likely to feel that sex with non spouse is not wrong or wrong only sometimes
+
+Logistic model: $\beta$ indicates that those who identify as female, compared to those who don't, have a .343 lower log odds of feeling that sex with non spouse is not wrong or wrong only sometimes
+
+## Model 3: Believing in Higher Power and Going to Church Weekly
+
+X: Believing in a higher power
+
+-   1: Believes
+
+-   0: Doesn't believe
+
+Y: Attending church weekly
+
+-   1: Reports attending weekly
+
+-   0: Attends less than weekly or not at all
+
+```{r}
+d3 <- gss18 |> 
+  select(attend, god) |> 
+  haven::zap_missing() |> 
+  haven::zap_labels() |> 
+  mutate(weekly = if_else(attend >= 7, 1L, 0L),
+         believe = if_else(god >= 3, 1L, 0L)) |> 
+  drop_na()
+
+alpha_beta(d3, believe, weekly)
+```
+
+Linear model: $\beta$ indicates that those who report attending church weekly or more, compared to those who don't, are 12.7 percentage points more likely to report belief in a higher power
+
+Logistic model: $\beta$ indicates that those who report attending church weekly or more, compared to those who don't, have a 2.474 higher log odds of reporting belief in a higher power
+
+## Model 4: Gossiping and Going to Church Weekly
+
+X: Gossiping
+
+-   1: Gossips
+
+-   0: Doesn't gossip
+
+Y: Attending church weekly
+
+-   1: Reports attending weekly
+
+-   0: Attends less than weekly or not at all
+
+```{r}
+d4 <- gss18 |> 
+  select(attend, mcsds6) |> 
+  haven::zap_missing() |> 
+  haven::zap_labels() |> 
+  mutate(weekly = if_else(attend >= 7, 1L, 0L),
+         gossip = if_else(mcsds6 == 1, 1L, 0L)) |> 
+  drop_na()
+
+alpha_beta(d4, gossip, weekly)
+```
+
+Linear model: $\beta$ indicates that those who report attending church weekly or more, compared to those who don't, are 7.3 percentage points less likely to report engagement in gossip
+
+Logistic model: $\beta$ indicates that those who report attending church weekly or more, compared to those who don't, have a .283 lower log odds of reporting engagement in gossip
+
+## Model 5: Being a Girl and Gossiping
+
+X: Female
+
+-   1: identifies as female
+
+-   0: identifies as male
+
+Y: Gossiping
+
+-   1: Gossips
+
+-   0: Doesn't gossip
+
+```{r}
+d5 <- gss18 |> 
+  select(sex, mcsds6) |> 
+  haven::zap_missing() |> 
+  haven::zap_labels() |> 
+  mutate(female = if_else(sex == 2, 1L, 0L),
+         gossip = if_else(mcsds6 == 1, 1L, 0L)) |> 
+  drop_na()
+
+alpha_beta(d5, female, gossip)
+```
+
+Linear model: $\beta$ indicates that those who report gossiping from time to time, compared to those who don't, are 16.27 percentage points more likely to identify as female
+
+Logistic model: $\beta$ indicates that those who report gossiping from time to time, compared to those who don't, have a .658 higher log odds of identifying as female
+
+## Model 6: Going to Church Weekly and Going To College
+
+X: Attending church weekly
+
+-   1: Reports attending weekly
+
+-   0: Attends less than weekly or not at all
+
+Y: Having at least a bachelor's degree
+
+-   1: has at least a bachelors degree
+
+-   0: does not
+
+```{r}
+d6 <- gss18 |> 
+  select(attend, degree) |> 
+  haven::zap_missing() |> 
+  haven::zap_labels() |> 
+  mutate(weekly = if_else(attend >= 7, 1L, 0L),
+         college = if_else(degree >= 3, 1L, 0L)) |> 
+  drop_na()
+
+alpha_beta(d6, weekly, college)
+```
+
+Linear model: $\beta$ indicates that those holding a bachelor's degree (or higher), compared to those who don't, are 5.9 percentage points more likely to be weekly church attenders
+
+Logistic model: $\beta$ indicates that those holding a bachelor's degree (or higher), compared to those who don't, have a .328 higher log odds of being weekly church attenders
+
+## Model 7: Gossiping and Believing in Higher Power
+
+X: Gossiping
+
+-   1: Gossips
+
+-   0: Doesn't gossip
+
+Y: Believing in a higher power
+
+-   1: Believes
+
+-   0: Doesn't believe
+
+```{r}
+d7 <- gss18 |> 
+  select(mcsds6, god) |> 
+  haven::zap_missing() |> 
+  haven::zap_labels() |> 
+  mutate(gossip = if_else(mcsds6 == 1, 1L, 0L),
+         believe = if_else(god >= 3, 1L, 0L)) |> 
+  drop_na()
+
+alpha_beta(d7, gossip, believe)
+```
+
+Linear model: $\beta$ indicates that those who believe in a higher power, compared to those who don't, are 2 percentage points more likely to report engagement in gossip
+
+Logistic model: $\beta$ indicates that indicates that those who believe in a higher power, compared to those who don't, have a .081 higher log odds of reporting engagement in gossip
+
+## Model 8: Being A Girl and Conservatism
+
+X: Female
+
+-   1: identifies as female
+
+-   0: identifies as male
+
+Y: Conservative
+
+-   1: identifies as conservative
+
+-   0: identifies as something other than conservative
+
+```{r}
+d8 <- gss18 |> 
+  select(polviews, sex) |> 
+  haven::zap_missing() |> 
+  haven::zap_labels() |> 
+  mutate(conservative = if_else(polviews >= 5, 1L, 0L),
+         female = if_else(sex == 2, 1L, 0L)) |> 
+  drop_na()
+
+alpha_beta(d8, female, conservative)
+```
+
+Linear model: $\beta$ indicates that those who identify as conservative, as compared to those who don't, are 3.7 percentage points less likely to identify as female
+
+Logistic model: $\beta$ indicates that those who identify as conservative, as compared to those who don't, have a .148 lower log odds of identifying as female

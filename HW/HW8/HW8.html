@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.433">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Ben Rochford">
+
+<title>HW8</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="HW8_files/libs/clipboard/clipboard.min.js"></script>
+<script src="HW8_files/libs/quarto-html/quarto.js"></script>
+<script src="HW8_files/libs/quarto-html/popper.min.js"></script>
+<script src="HW8_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="HW8_files/libs/quarto-html/anchor.min.js"></script>
+<link href="HW8_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="HW8_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="HW8_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="HW8_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="HW8_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">HW8</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Ben Rochford </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<section id="importing-gss-variables" class="level2">
+<h2 class="anchored" data-anchor-id="importing-gss-variables">Importing GSS variables</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>gss18 <span class="ot">&lt;-</span> <span class="fu">gss_get_yr</span>(<span class="dv">2018</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Fetching: https://gss.norc.org/documents/stata/2018_stata.zip</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>alpha_beta <span class="ot">&lt;-</span> <span class="cf">function</span>(d, X, Y) {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  tbl <span class="ot">&lt;-</span> <span class="fu">tabyl</span>(d, {{X}}, {{Y}}) <span class="sc">|&gt;</span> <span class="fu">adorn_totals</span>(<span class="fu">c</span>(<span class="st">"row"</span>, <span class="st">"col"</span>))</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  n00 <span class="ot">&lt;-</span> tbl[[<span class="dv">2</span>]][<span class="dv">1</span>]</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  n01 <span class="ot">&lt;-</span> tbl[[<span class="dv">3</span>]][<span class="dv">1</span>]</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  n10 <span class="ot">&lt;-</span> tbl[[<span class="dv">2</span>]][<span class="dv">2</span>]</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  n11 <span class="ot">&lt;-</span> tbl[[<span class="dv">3</span>]][<span class="dv">2</span>]</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(tbl)</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  pr_y1_gx0 <span class="ot">=</span> n10 <span class="sc">/</span> (n10 <span class="sc">+</span> n00)</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  pr_y1_gx1 <span class="ot">=</span> (n11 <span class="sc">/</span> (n11 <span class="sc">+</span> n01))</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  linear_alpha <span class="ot">&lt;-</span> pr_y1_gx0</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>  linear_beta <span class="ot">&lt;-</span> pr_y1_gx1 <span class="sc">-</span> linear_alpha</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  log_alpha <span class="ot">&lt;-</span> <span class="fu">log</span>(pr_y1_gx0 <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">-</span> pr_y1_gx0))</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>  log_beta <span class="ot">&lt;-</span> <span class="fu">log</span>(pr_y1_gx1 <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">-</span> pr_y1_gx1)) <span class="sc">-</span> log_alpha</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"</span><span class="sc">\n</span><span class="st">Linear alpha:"</span>, linear_alpha, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"Linear beta:"</span>, linear_beta, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"p = %.3f + %.3fx</span><span class="sc">\n</span><span class="st">"</span>, linear_alpha, linear_beta), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"Logistic alpha:"</span>, log_alpha, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"Logistic beta:"</span>, log_beta, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"logit(p) = %.3f + %.3fx</span><span class="sc">\n</span><span class="st">"</span>, log_alpha, log_beta))</span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><em>(The titles are meant to be sassy and not literally descriptive)</em></p>
+</section>
+<section id="model-1-being-alright-with-cheating-and-belief-in-a-higher-power" class="level2">
+<h2 class="anchored" data-anchor-id="model-1-being-alright-with-cheating-and-belief-in-a-higher-power">Model 1: Being Alright With Cheating and Belief in a Higher Power</h2>
+<p>X: Thinking sex with someone other than one’s spouse is wrong only sometimes or not at all</p>
+<ul>
+<li><p>1: not wrong at all or wrong only sometimes</p></li>
+<li><p>0: always wrong, almost always wrong</p></li>
+</ul>
+<p>Y: Believing in a higher power</p>
+<ul>
+<li><p>1: Believes</p></li>
+<li><p>0: Doesn’t believe</p></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>d1 <span class="ot">&lt;-</span> gss18 <span class="sc">|&gt;</span> </span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(god, xmarsex) <span class="sc">|&gt;</span> </span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  haven<span class="sc">::</span><span class="fu">zap_missing</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  haven<span class="sc">::</span><span class="fu">zap_labels</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">believe =</span> <span class="fu">if_else</span>(god <span class="sc">&gt;=</span> <span class="dv">3</span>, 1L, 0L),</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>         <span class="at">cheating_cool =</span> <span class="fu">if_else</span>(xmarsex <span class="sc">&gt;=</span> <span class="dv">3</span>, 1L, 0L)) <span class="sc">|&gt;</span> </span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">drop_na</span>()</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="fu">alpha_beta</span>(d1, cheating_cool, believe)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> cheating_cool   0    1 Total
+             0 129 1242  1371
+             1  50  112   162
+         Total 179 1354  1533
+
+Linear alpha: 0.2793296 
+Linear beta: -0.1966117 
+p = 0.279 + -0.197x
+ 
+Logistic alpha: -0.9477894 
+Logistic beta: -1.45819 
+logit(p) = -0.948 + -1.458x</code></pre>
+</div>
+</div>
+<p>Linear model: <span class="math inline">\(\beta\)</span> indicates that those who believe in a higher power, compared to those who don’t, are 19.7 percentage points less likely to feel that sex with non spouse is not wrong or wrong only sometimes</p>
+<p>Logistic model: <span class="math inline">\(\beta\)</span> indicates that those who believe in a higher power, compared to those who don’t, have a 1.458 lower log odds of feeling that sex with non spouse is not wrong or wrong only sometimes</p>
+</section>
+<section id="model-2-being-alright-with-cheating-and-being-female" class="level2">
+<h2 class="anchored" data-anchor-id="model-2-being-alright-with-cheating-and-being-female">Model 2: Being Alright With Cheating and Being Female</h2>
+<p>X: Thinking sex with someone other than one’s spouse is wrong only sometimes or not at all</p>
+<ul>
+<li><p>1: not wrong at all or wrong only sometimes</p></li>
+<li><p>0: always wrong, almost always wrong</p></li>
+</ul>
+<p>Y: Female</p>
+<ul>
+<li><p>1: identifies as female</p></li>
+<li><p>0: identifies as male</p></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>d2 <span class="ot">&lt;-</span> gss18 <span class="sc">|&gt;</span> </span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(sex, xmarsex) <span class="sc">|&gt;</span> </span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  haven<span class="sc">::</span><span class="fu">zap_missing</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  haven<span class="sc">::</span><span class="fu">zap_labels</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">female =</span> <span class="fu">if_else</span>(sex <span class="sc">==</span> <span class="dv">2</span>, 1L, 0L),</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>         <span class="at">cheating_cool =</span> <span class="fu">if_else</span>(xmarsex <span class="sc">&gt;=</span> <span class="dv">3</span> <span class="sc">&amp;</span> xmarsex <span class="sc">&lt;</span> <span class="dv">8</span>, 1L, 0L)) <span class="sc">|&gt;</span> </span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">drop_na</span>()</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="fu">alpha_beta</span>(d2, cheating_cool, female)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> cheating_cool   0   1 Total
+             0 605 783  1388
+             1  86  79   165
+         Total 691 862  1553
+
+Linear alpha: 0.1244573 
+Linear beta: -0.03280998 
+p = 0.124 + -0.033x
+ 
+Logistic alpha: -1.950881 
+Logistic beta: -0.3428037 
+logit(p) = -1.951 + -0.343x</code></pre>
+</div>
+</div>
+<p>Linear model: <span class="math inline">\(\beta\)</span> indicates that those who identify as female, compared to those who don’t, are 3.3 percentage points less likely to feel that sex with non spouse is not wrong or wrong only sometimes</p>
+<p>Logistic model: <span class="math inline">\(\beta\)</span> indicates that those who identify as female, compared to those who don’t, have a .343 lower log odds of feeling that sex with non spouse is not wrong or wrong only sometimes</p>
+</section>
+<section id="model-3-believing-in-higher-power-and-going-to-church-weekly" class="level2">
+<h2 class="anchored" data-anchor-id="model-3-believing-in-higher-power-and-going-to-church-weekly">Model 3: Believing in Higher Power and Going to Church Weekly</h2>
+<p>X: Believing in a higher power</p>
+<ul>
+<li><p>1: Believes</p></li>
+<li><p>0: Doesn’t believe</p></li>
+</ul>
+<p>Y: Attending church weekly</p>
+<ul>
+<li><p>1: Reports attending weekly</p></li>
+<li><p>0: Attends less than weekly or not at all</p></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>d3 <span class="ot">&lt;-</span> gss18 <span class="sc">|&gt;</span> </span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(attend, god) <span class="sc">|&gt;</span> </span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  haven<span class="sc">::</span><span class="fu">zap_missing</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  haven<span class="sc">::</span><span class="fu">zap_labels</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">weekly =</span> <span class="fu">if_else</span>(attend <span class="sc">&gt;=</span> <span class="dv">7</span>, 1L, 0L),</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>         <span class="at">believe =</span> <span class="fu">if_else</span>(god <span class="sc">&gt;=</span> <span class="dv">3</span>, 1L, 0L)) <span class="sc">|&gt;</span> </span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">drop_na</span>()</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="fu">alpha_beta</span>(d3, believe, weekly)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> believe    0   1 Total
+       0  252   7   259
+       1 1540 508  2048
+   Total 1792 515  2307
+
+Linear alpha: 0.859375 
+Linear beta: 0.1270328 
+p = 0.859 + 0.127x
+ 
+Logistic alpha: 1.810109 
+Logistic beta: 2.474463 
+logit(p) = 1.810 + 2.474x</code></pre>
+</div>
+</div>
+<p>Linear model: <span class="math inline">\(\beta\)</span> indicates that those who report attending church weekly or more, compared to those who don’t, are 12.7 percentage points more likely to report belief in a higher power</p>
+<p>Logistic model: <span class="math inline">\(\beta\)</span> indicates that those who report attending church weekly or more, compared to those who don’t, have a 2.474 higher log odds of reporting belief in a higher power</p>
+</section>
+<section id="model-4-gossiping-and-going-to-church-weekly" class="level2">
+<h2 class="anchored" data-anchor-id="model-4-gossiping-and-going-to-church-weekly">Model 4: Gossiping and Going to Church Weekly</h2>
+<p>X: Gossiping</p>
+<ul>
+<li><p>1: Gossips</p></li>
+<li><p>0: Doesn’t gossip</p></li>
+</ul>
+<p>Y: Attending church weekly</p>
+<ul>
+<li><p>1: Reports attending weekly</p></li>
+<li><p>0: Attends less than weekly or not at all</p></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>d4 <span class="ot">&lt;-</span> gss18 <span class="sc">|&gt;</span> </span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(attend, mcsds6) <span class="sc">|&gt;</span> </span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  haven<span class="sc">::</span><span class="fu">zap_missing</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  haven<span class="sc">::</span><span class="fu">zap_labels</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">weekly =</span> <span class="fu">if_else</span>(attend <span class="sc">&gt;=</span> <span class="dv">7</span>, 1L, 0L),</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>         <span class="at">gossip =</span> <span class="fu">if_else</span>(mcsds6 <span class="sc">==</span> <span class="dv">1</span>, 1L, 0L)) <span class="sc">|&gt;</span> </span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">drop_na</span>()</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="fu">alpha_beta</span>(d4, gossip, weekly)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> gossip   0   1 Total
+      0 433 131   564
+      1 465 105   570
+  Total 898 236  1134
+
+Linear alpha: 0.5178174 
+Linear beta: -0.07290212 
+p = 0.518 + -0.073x
+ 
+Logistic alpha: 0.07129968 
+Logistic beta: -0.2925367 
+logit(p) = 0.071 + -0.293x</code></pre>
+</div>
+</div>
+<p>Linear model: <span class="math inline">\(\beta\)</span> indicates that those who report attending church weekly or more, compared to those who don’t, are 7.3 percentage points less likely to report engagement in gossip</p>
+<p>Logistic model: <span class="math inline">\(\beta\)</span> indicates that those who report attending church weekly or more, compared to those who don’t, have a .283 lower log odds of reporting engagement in gossip</p>
+</section>
+<section id="model-5-being-a-girl-and-gossiping" class="level2">
+<h2 class="anchored" data-anchor-id="model-5-being-a-girl-and-gossiping">Model 5: Being a Girl and Gossiping</h2>
+<p>X: Female</p>
+<ul>
+<li><p>1: identifies as female</p></li>
+<li><p>0: identifies as male</p></li>
+</ul>
+<p>Y: Gossiping</p>
+<ul>
+<li><p>1: Gossips</p></li>
+<li><p>0: Doesn’t gossip</p></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>d5 <span class="ot">&lt;-</span> gss18 <span class="sc">|&gt;</span> </span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(sex, mcsds6) <span class="sc">|&gt;</span> </span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  haven<span class="sc">::</span><span class="fu">zap_missing</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  haven<span class="sc">::</span><span class="fu">zap_labels</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">female =</span> <span class="fu">if_else</span>(sex <span class="sc">==</span> <span class="dv">2</span>, 1L, 0L),</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>         <span class="at">gossip =</span> <span class="fu">if_else</span>(mcsds6 <span class="sc">==</span> <span class="dv">1</span>, 1L, 0L)) <span class="sc">|&gt;</span> </span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">drop_na</span>()</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a><span class="fu">alpha_beta</span>(d5, female, gossip)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> female   0   1 Total
+      0 322 231   553
+      1 247 342   589
+  Total 569 573  1142
+
+Linear alpha: 0.4340949 
+Linear beta: 0.1627637 
+p = 0.434 + 0.163x
+ 
+Logistic alpha: -0.2651632 
+Logistic beta: 0.6575562 
+logit(p) = -0.265 + 0.658x</code></pre>
+</div>
+</div>
+<p>Linear model: <span class="math inline">\(\beta\)</span> indicates that those who report gossiping from time to time, compared to those who don’t, are 16.27 percentage points more likely to identify as female</p>
+<p>Logistic model: <span class="math inline">\(\beta\)</span> indicates that those who report gossiping from time to time, compared to those who don’t, have a .658 higher log odds of identifying as female</p>
+</section>
+<section id="model-6-going-to-church-weekly-and-going-to-college" class="level2">
+<h2 class="anchored" data-anchor-id="model-6-going-to-church-weekly-and-going-to-college">Model 6: Going to Church Weekly and Going To College</h2>
+<p>X: Attending church weekly</p>
+<ul>
+<li><p>1: Reports attending weekly</p></li>
+<li><p>0: Attends less than weekly or not at all</p></li>
+</ul>
+<p>Y: Having at least a bachelor’s degree</p>
+<ul>
+<li><p>1: has at least a bachelors degree</p></li>
+<li><p>0: does not</p></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>d6 <span class="ot">&lt;-</span> gss18 <span class="sc">|&gt;</span> </span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(attend, degree) <span class="sc">|&gt;</span> </span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  haven<span class="sc">::</span><span class="fu">zap_missing</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  haven<span class="sc">::</span><span class="fu">zap_labels</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">weekly =</span> <span class="fu">if_else</span>(attend <span class="sc">&gt;=</span> <span class="dv">7</span>, 1L, 0L),</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>         <span class="at">college =</span> <span class="fu">if_else</span>(degree <span class="sc">&gt;=</span> <span class="dv">3</span>, 1L, 0L)) <span class="sc">|&gt;</span> </span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">drop_na</span>()</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a><span class="fu">alpha_beta</span>(d6, weekly, college)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> weekly    0   1 Total
+      0 1290 522  1812
+      1  333 187   520
+  Total 1623 709  2332
+
+Linear alpha: 0.2051756 
+Linear beta: 0.05857616 
+p = 0.205 + 0.059x
+ 
+Logistic alpha: -1.354255 
+Logistic beta: 0.327696 
+logit(p) = -1.354 + 0.328x</code></pre>
+</div>
+</div>
+<p>Linear model: <span class="math inline">\(\beta\)</span> indicates that those holding a bachelor’s degree (or higher), compared to those who don’t, are 5.9 percentage points more likely to be weekly church attenders</p>
+<p>Logistic model: <span class="math inline">\(\beta\)</span> indicates that those holding a bachelor’s degree (or higher), compared to those who don’t, have a .328 higher log odds of being weekly church attenders</p>
+</section>
+<section id="model-7-gossiping-and-believing-in-higher-power" class="level2">
+<h2 class="anchored" data-anchor-id="model-7-gossiping-and-believing-in-higher-power">Model 7: Gossiping and Believing in Higher Power</h2>
+<p>X: Gossiping</p>
+<ul>
+<li><p>1: Gossips</p></li>
+<li><p>0: Doesn’t gossip</p></li>
+</ul>
+<p>Y: Believing in a higher power</p>
+<ul>
+<li><p>1: Believes</p></li>
+<li><p>0: Doesn’t believe</p></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>d7 <span class="ot">&lt;-</span> gss18 <span class="sc">|&gt;</span> </span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(mcsds6, god) <span class="sc">|&gt;</span> </span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  haven<span class="sc">::</span><span class="fu">zap_missing</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  haven<span class="sc">::</span><span class="fu">zap_labels</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">gossip =</span> <span class="fu">if_else</span>(mcsds6 <span class="sc">==</span> <span class="dv">1</span>, 1L, 0L),</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>         <span class="at">believe =</span> <span class="fu">if_else</span>(god <span class="sc">&gt;=</span> <span class="dv">3</span>, 1L, 0L)) <span class="sc">|&gt;</span> </span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">drop_na</span>()</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a><span class="fu">alpha_beta</span>(d7, gossip, believe)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> gossip   0    1 Total
+      0  65  500   565
+      1  61  509   570
+  Total 126 1009  1135
+
+Linear alpha: 0.484127 
+Linear beta: 0.02033288 
+p = 0.484 + 0.020x
+ 
+Logistic alpha: -0.06351341 
+Logistic beta: 0.08135332 
+logit(p) = -0.064 + 0.081x</code></pre>
+</div>
+</div>
+<p>Linear model: <span class="math inline">\(\beta\)</span> indicates that those who believe in a higher power, compared to those who don’t, are 2 percentage points more likely to report engagement in gossip</p>
+<p>Logistic model: <span class="math inline">\(\beta\)</span> indicates that indicates that those who believe in a higher power, compared to those who don’t, have a .081 higher log odds of reporting engagement in gossip</p>
+</section>
+<section id="model-8-being-a-girl-and-conservatism" class="level2">
+<h2 class="anchored" data-anchor-id="model-8-being-a-girl-and-conservatism">Model 8: Being A Girl and Conservatism</h2>
+<p>X: Female</p>
+<ul>
+<li><p>1: identifies as female</p></li>
+<li><p>0: identifies as male</p></li>
+</ul>
+<p>Y: Conservative</p>
+<ul>
+<li><p>1: identifies as conservative</p></li>
+<li><p>0: identifies as something other than conservative</p></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>d8 <span class="ot">&lt;-</span> gss18 <span class="sc">|&gt;</span> </span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(polviews, sex) <span class="sc">|&gt;</span> </span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>  haven<span class="sc">::</span><span class="fu">zap_missing</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>  haven<span class="sc">::</span><span class="fu">zap_labels</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">conservative =</span> <span class="fu">if_else</span>(polviews <span class="sc">&gt;=</span> <span class="dv">5</span>, 1L, 0L),</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>         <span class="at">female =</span> <span class="fu">if_else</span>(sex <span class="sc">==</span> <span class="dv">2</span>, 1L, 0L)) <span class="sc">|&gt;</span> </span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">drop_na</span>()</span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a><span class="fu">alpha_beta</span>(d8, female, conservative)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> female    0   1 Total
+      0  663 350  1013
+      1  848 386  1234
+  Total 1511 736  2247
+
+Linear alpha: 0.5612177 
+Linear beta: -0.03676121 
+p = 0.561 + -0.037x
+ 
+Logistic alpha: 0.2461056 
+Logistic beta: -0.1482014 
+logit(p) = 0.246 + -0.148x</code></pre>
+</div>
+</div>
+<p>Linear model: <span class="math inline">\(\beta\)</span> indicates that those who identify as conservative, as compared to those who don’t, are 3.7 percentage points less likely to identify as female</p>
+<p>Logistic model: <span class="math inline">\(\beta\)</span> indicates that those who identify as conservative, as compared to those who don’t, have a .148 lower log odds of identifying as female</p>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>
