@@ -1,0 +1,191 @@
+---
+title: "HW9"
+author: "Ben Rochford"
+format: html
+editor: visual
+---
+
+```{r}
+#| echo: false
+#| results: hide
+#| include: false
+library(conflicted)
+conflicts_prefer(dplyr::filter)
+library(tidyverse)
+library(gssr)
+library(ggthemes)
+theme_set(theme_few(base_family = "Optima")) 
+```
+
+```{r}
+gss18 <- gss_get_yr(2018) 
+
+d <- gss18 |> 
+  select(attend, polviews, cappun) |> 
+  haven::zap_missing() |> 
+  haven::zap_labels() |> 
+  mutate(
+    weekly = if_else(attend >= 7, 1L, 0L),
+    conservative = if_else(polviews >= 5, 1L, 0L),
+    cappun = if_else(cappun == 1, 1L, 0L)
+    ) |> 
+  drop_na() |> 
+  select(cappun, weekly, conservative) 
+```
+
+Contingency table over cappun and weekly:
+
+```{r}
+crosstab1 <- table(cp = d$cappun, weekly = d$weekly)
+crosstab1
+
+## column percentages
+prop.table(crosstab1, margin = 2)
+```
+
+### 9.1.1
+
+-   Express the relationship between `cappun` (Y) and `weekly` (X) as a linear probability model.
+
+```{r}
+alpha_linear_911 <- 1050/(587+1050)
+beta_linear_911 <- 277/(188+277) - alpha_linear_911
+cat(sprintf("p(cappun) = %.3f + %.3fx\n", alpha_linear_911, beta_linear_911))
+```
+
+-   Express the relationship between `cappun` (Y) and `weekly` (X) as a logistic regression model.
+
+```{r}
+alpha_log_911 <- log(1050/587)
+beta_log_911 <- log(277/188) - alpha_log_911
+cat(sprintf("logit(cappun) = %.3f + %.3fx\n", alpha_log_911, beta_log_911))
+```
+
+### 
+
+Contingency table over cappun, weekly, and conservative:
+
+```{r}
+crosstab2 <- table(cp = d$cappun, weekly = d$weekly, conservative = d$conservative)
+
+## column percentages
+prop.table(crosstab2, margin = c(2, 3))
+
+as_tibble(crosstab2) |> 
+  mutate(cp = if_else(cp == "1", "favors", "opposes")) |> 
+  pivot_wider(names_from = cp, values_from = n)
+```
+
+### 9.1.2
+
+-   Express the relationship between `cappun` (Y), `weekly` (X_1), and `conservative` (X_2) as a linear probability model.
+
+```{r}
+alpha_linear_912 <- 682/(485+682)
+beta1_linear_912 <- 123/(115+123) - alpha_linear_912
+beta2_linear_912 <- 368/(102+368) - alpha_linear_912
+beta3_linear_912 <- 154/(73+154) - alpha_linear_912 - beta1_linear_912 - beta2_linear_912
+cat(sprintf("p(cappun) = %.3f + %.3f*weekly + %.3f*cons + %.3f*weekly*cons", alpha_linear_912, beta1_linear_912, beta2_linear_912, beta3_linear_912))
+```
+
+-   Express the relationship between `cappun` (Y), `weekly` (X_1), and `conservative` (X_2) as a logistic regression model.
+
+```{r}
+alpha_log_912 <- log(682/485)
+beta1_log_912 <- log(123/115) - alpha_log_912
+beta2_log_912 <- log(368/102) - alpha_log_912
+beta3_log_912 <- log(154/73) - alpha_log_912 - beta1_log_912 - beta2_log_912
+cat(sprintf("logit(cappun) = %.3f + %.3f*weekly + %.3f*cons + %.3f*weekly*cons", alpha_log_912, beta1_log_912, beta2_log_912, beta3_log_912))
+```
+
+### 9.2
+
+Contingency table over (posessing a degree of at least) bachelors, (attending church) weekly, and (being) conservative
+
+```{r}
+d92 <- gss18 |> 
+  select(degree, attend, polviews) |> 
+  haven::zap_missing() |> 
+  haven::zap_labels() |> 
+  mutate(bachelors = if_else(degree >= 3, 1L, 0L),
+         weekly = if_else(attend >= 7, 1L, 0L),
+         conservative = if_else(polviews >= 5, 1L, 0L)) |> 
+  drop_na()
+```
+
+```{r}
+crosstab92 <- table(BA=d92$bachelors, weekly=d92$weekly, conservative=d92$conservative)
+
+## column percentages
+prop.table(crosstab92, margin = c(2, 3))
+
+as_tibble(crosstab92) |> 
+  mutate(BA = if_else(BA == "1", ">= bachelors", "< bachelors")) |> 
+  pivot_wider(names_from = BA, values_from = n)
+```
+
+-   Express the relationship between `bachelors` (Y), `weekly` (X_1), and `conservative` (X_2) as a linear probability model.
+
+```{r}
+alpha_linear_92 <- 384/(859+384)
+beta1_linear_92 <- 93/(164+93) - alpha_linear_92
+beta2_linear_92 <- 132/(363+132) - alpha_linear_92
+beta3_linear_92 <- 88/(152+88) - alpha_linear_92 - beta1_linear_92 - beta2_linear_92
+cat(sprintf("p(bachelors) = %.3f + %.3f*weekly + %.3f*cons + %.3f*weekly*cons", alpha_linear_92, beta1_linear_92, beta2_linear_92, beta3_linear_92))
+```
+
+-   Express the relationship between `bachelors` (Y), `weekly` (X_1), and `conservative` (X_2) as a logistic regression model.
+
+```{r}
+alpha_log_92 <- log(384/859)
+beta1_log_92 <- log(93/164) - alpha_log_92
+beta2_log_92 <- log(132/363) - alpha_log_92
+beta3_log_92 <- log(88/152) - alpha_log_92 - beta1_log_92 - beta2_log_92
+cat(sprintf("logit(bachelors) = %.3f + %.3f*weekly + %.3f*cons + %.3f*weekly*cons", alpha_log_92, beta1_log_92, beta2_log_92, beta3_log_92))
+```
+
+### 9.3
+
+Contingency table over (whether someone is OK with) extramarital sex, (whether someone is) female, (whether someone says they) gossip
+
+```{r}
+d93 <- gss18 |> 
+  select(mcsds6, sex, xmarsex) |> 
+  haven::zap_missing() |> 
+  haven::zap_labels() |> 
+  mutate(cheating_cool = if_else(xmarsex >= 3 & xmarsex < 8, 1L, 0L),
+         female = if_else(sex == 2, 1L, 0L),
+         gossip = if_else(mcsds6 == 1, 1L, 0L)) |> 
+  drop_na()
+```
+
+```{r}
+crosstab93 <- table(xmar_sex_ok=d93$cheating_cool, female=d93$female, gossip=d93$gossip)
+
+## column percentages
+prop.table(crosstab93, margin = c(2, 3))
+
+as_tibble(crosstab93) |> 
+  mutate(xmar_sex_ok = if_else(xmar_sex_ok == "1", "cheating cool", "not cool")) |> 
+  pivot_wider(names_from = xmar_sex_ok, values_from = n)
+```
+
+-   Express the relationship between xmar_sex_ok (Y), `female` (X_1), and `gossip` (X_2) as a linear probability model.
+
+```{r}
+alpha_linear_93 <- 20/(185+20)
+beta1_linear_93 <- 13/(149+13) - alpha_linear_93
+beta2_linear_93 <- 22/(118+22) - alpha_linear_93
+beta3_linear_93 <- 28/(215+28) - alpha_linear_93 - beta1_linear_93 - beta2_linear_93
+cat(sprintf("p(cheating cool) = %.3f + %.3f*female + %.3f*gossip + %.3f*female*gossip", alpha_linear_93, beta1_linear_93, beta2_linear_93, beta3_linear_93))
+```
+
+-   Express the relationship between xmar_sex_ok (Y), `female` (X_1), and `gossip` (X_2) as a logistic regression model.
+
+```{r}
+alpha_log_93 <- log(20/185)
+beta1_log_93 <- log(13/149) - alpha_log_93
+beta2_log_93 <- log(22/118) - alpha_log_93
+beta3_log_93 <- log(28/215) - alpha_log_93 - beta1_log_93 - beta2_log_93
+cat(sprintf("logit(cheating cool) = %.3f + %.3f*female + %.3f*gossip + %.3f*female*gossip", alpha_log_93, beta1_log_93, beta2_log_93, beta3_log_93))
+```
