@@ -1,0 +1,202 @@
+---
+title: "HW10"
+author: "Ben Rochford"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+theme_set(theme_light(base_family = "Optima"))
+
+library(modelsummary)
+library(broom)
+library(gt)
+
+library(gssr)
+gss18 <- gss_get_yr(2018) 
+
+d <- gss18 |> 
+  select(attend, polviews, cappun, degree) |> 
+  haven::zap_missing() |> 
+  mutate(across(!degree, haven::zap_labels)) |> 
+  mutate(degree = haven::as_factor(degree)) |> 
+  mutate(
+    weekly = if_else(attend >= 7, 1L, 0L),
+    polviews = polviews - 4,
+    cappun = if_else(cappun == 1, 1L, 0L),
+    ) |> 
+  mutate(conservative = as.integer(polviews > 0)) |> 
+  drop_na() 
+
+d
+```
+
+## 10.3.1
+
+```{r}
+mat311 <- model.matrix(cappun ~ polviews + weekly + polviews:weekly, data = d)
+head(mat311)
+dim(mat311)
+```
+
+`cappun` is an outcome variable here, while `polviews` and `weekly` and their interaction are predictor variables. Model matrix dataframe creates a column for intercept and for each predictor, for each row of the data.
+
+```{r}
+mat312 <- model.matrix(cappun ~ polviews * weekly, data = d)
+head(mat312)
+dim(mat312)
+```
+
+Syntactically equivalent to the first.
+
+```{r}
+mat313 <- model.matrix(cappun ~ degree, data = d)
+head(mat313)
+dim(mat313)
+```
+
+Now we have columns for the 4 predictors derived from `degree` which has 4 possible values. As a result, the model matrix has columns for the intercept and the 4 predictors, with rows for each data point.
+
+## 10.3.2
+
+```{r}
+mod1 <- glm(cappun ~ conservative + weekly, data = d, family = "binomial")
+mod2 <- glm(cappun ~ conservative * weekly, data = d, family = "binomial")
+mod3 <- glm(cappun ~ polviews + weekly, data = d, family = "binomial")
+mod4 <- glm(cappun ~ polviews * weekly, data = d, family = "binomial")
+```
+
+```{r}
+msummary(list(mod1, mod2, mod3, mod4), output = "gt") |> 
+  opt_table_font(font = "Optima")
+```
+
+### Comparing with AIC and BIC
+
+The models that used the more granular `polviews` variable as a predictor rather than `conservative` had markedly lower AIC and BIC values. The model with the lowest overall AIC score was model 4, which predicted `cappun` using `polviews`, `weekly`, and their interaction.
+
+### Interpreting Intercepts
+
+The log odds of someone supporting capital punishment when they ...
+
+-   1: are not conservative and do not attend church weekly = 0.358
+
+-   2: are not conservative and do not attend church weekly!! = 0.341
+
+-   3: are politically moderate and do not attend church weekly = 0.666
+
+-   4: are politically moderate and do not attend church weekly!! = 0.677
+
+We see that these models are predicting in general that moderates have a higher log odds of supporting capital punishment than "non conservatives."
+
+### Using mod4
+
+to predict probability that a slightly conservative individual that attends weekly religious ceremonies favors capital punishment:
+
+polviews == 1 and weekly == 1
+
+```{r}
+plogis(0.677 + 0.441*1 - 0.451*1 - 0.138)
+```
+
+## 10.3.3
+
+### Transforming polviews
+
+```{r}
+d <- d |> 
+  mutate(polviews2 = case_when(polviews < 0 ~ "liberal",
+                               polviews == 0 ~ "moderate",
+                               polviews > 0 ~ "conservative")) |> 
+  mutate(polviews2 = haven::as_factor(polviews2))
+```
+
+### Fitting new reference categories
+
+```{r}
+d$polviews2 <- relevel(d$polviews2, ref = "liberal")
+mod331 <- glm(cappun ~ polviews2 + weekly, data = d, family = "binomial")
+
+d$polviews2 <- relevel(d$polviews2, ref = "moderate")
+mod332 <- glm(cappun ~ polviews2 + weekly, data = d, family = "binomial")
+
+d$polviews2 <- relevel(d$polviews2, ref = "conservative")
+mod333 <- glm(cappun ~ polviews2 + weekly, data = d, family = "binomial")
+
+msummary(list(mod331, mod332, mod333), gof_map = "none", output = "gt") |> 
+  opt_table_font(font = "Optima") 
+```
+
+### Interpreting coefficients
+
+-   1: point of reference is liberals. Moderates have a .894 higher log odds of supporting capital punishment, and conservatives have a 1.362 higher log odds of supporting capital punishment
+
+-   2: point of reference is moderates. Conservatives have a .468 higher log odds of supporting capital punishment, while liberals have a .894 lower log odds of supporting capital punishment
+
+-   3: point of reference is conservatives. Moderates have a .468 lower log odds of supporting capital punishment, while liberals have a 1.362 lower log odds of supporting capital punishment
+
+In all models, those that attend religious services weekly have a .417 lower log odds of supporting capital punishment.
+
+## 10.3.4
+
+### Entries for saturated model column
+
+```{r}
+# reset order
+d$polviews2 <- relevel(d$polviews2, ref = "moderate")
+d$polviews2 <- relevel(d$polviews2, ref = "liberal")
+
+d |> 
+  group_by(weekly, polviews2) |> 
+  summarize(p = mean(cappun))
+```
+
+### Entries for restricted model column
+
+```{r}
+mod34 <- glm(cappun ~ polviews2 + weekly, data = d, family = "binomial")
+
+d34 <- with(d, data.frame(weekly = c(0, 0, 0, 1, 1, 1), polviews2 = c("liberal","moderate","conservative","liberal","moderate","conservative")))
+
+d34$p <- predict(mod34, newdata = d34, type = "response")
+d34
+```
+
+## 10.3.5
+
+### Picking new GSS outcome and predictors
+
+Predicting being okay with extramarital sex based on gossiping a little, being female, and having a college degree.
+
+```{r}
+d_new <- gss18 |> 
+  select(mcsds6, sex, xmarsex, degree) |> 
+  haven::zap_missing() |> 
+  haven::zap_labels() |> 
+  mutate(cheating_cool = if_else(xmarsex >= 3 & xmarsex < 8, 1L, 0L),
+         female = if_else(sex == 2, 1L, 0L),
+         gossip = if_else(mcsds6 == 1, 1L, 0L),
+         college = if_else(degree >= 3, 1L, 0L)) |> 
+  drop_na()
+
+mod351 <- glm(cheating_cool ~ female + gossip, data = d_new, family = "binomial")
+mod352 <- glm(cheating_cool ~ female + gossip + college, data = d_new, family = "binomial")
+
+msummary(list(mod351, mod352), output = "gt") |> 
+  opt_table_font(font = "Optima")
+```
+
+### Comparing with AIC and BIC
+
+The AIC of the model that factors in college degree is very slightly lower, but the BIC of the model that does not factor in college degree is lower.
+
+Since AIC provides a good approximation for out-of-sample deviance, we can infer that the model that factors in college degree would have better out-of-sample predictive accuracy.
+
+### Relationship between outcomes and predictors
+
+In terms of the coefficients:
+
+-   1: being female results in a .301 lower log odds of being okay with extramarital sex, and being a gossip results in a .478 higher log odds of being okay with extramarital sex
+
+-   2: being female results in a .299 lower log odds of being okay with extramarital sex, and being a gossip results in a .443 higher log odds of being okay with extramarital sex, and having a college degree results in a .365 higher log odds of being okay with extramarital sex
