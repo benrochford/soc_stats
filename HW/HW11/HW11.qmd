@@ -1,0 +1,193 @@
+---
+title: "HW11"
+author: "Ben Rochford"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(ggthemes)
+theme_set(theme_few(base_family = "Optima"))
+
+library(modelsummary)
+library(broom)
+library(gt)
+library(performance)
+
+library(gssr)
+gss18 <- gss_get_yr(2018) 
+
+vars <- c(
+  "hompop", "sibs", "numwomen", "nummen", "age", "sex", "race", "attend", "polviews", "degree", "happy", "sexornt", "premarsx", "condom", "wrkslf", "fefam", "cappun", "padeg", "madeg"
+)
+
+d <- gss18 |> 
+  select(all_of(vars)) |> 
+  haven::zap_missing() |> 
+  ## continuous vars 
+  mutate(across(all_of(vars[1:5]), haven::zap_labels)) |> 
+  ## categorical vars
+  # mutate(across(!vars[1:5], haven::as_factor)) |>
+  mutate(numtot = numwomen + nummen)
+```
+
+# 11.1 Goodness of Fit
+
+## 11.1.1
+
+Create a logistic regression model predicting a binary variable
+
+*Predict attitude that women should be homemakers while men work by polviews and race*
+
+```{r}
+d11 <- d |>  # make df for this model
+  mutate(make_sandwich = if_else(fefam >= 3 & fefam < 5, 0L, 1L)) |> 
+  select(make_sandwich, polviews, race) |> drop_na()
+
+mod11 <- glm(make_sandwich ~ polviews + race, data = d11, 
+             family = "binomial"(link = "logit"))
+msummary(mod11, output = "gt") |> 
+  opt_table_font(font = "Optima")
+performance_hosmer(mod11, 5)
+```
+
+In the Hosmer-Lemeshow test, high p-value suggests that there is not enough evidence to say that the model is a poor fit.
+
+## 11.1.2
+
+Do a linktest on the same model:
+
+```{r}
+d11$pred_log_odds <- predict(mod11)
+
+lt0 <- glm(make_sandwich ~ pred_log_odds,
+           data = d11,
+           family = binomial)
+tidy(lt0)
+
+lt1 <- glm(make_sandwich ~ pred_log_odds + I(pred_log_odds^2),
+           data = d11,
+           family = binomial)
+tidy(lt1)
+```
+
+The $$\beta$$ coefficient is 1. This indicates that the model is well fit.
+
+# 11.2: Poisson Regression
+
+## 11.2.1
+
+Generate 1000 draws form the poisson distribution for values of lambda
+
+```{r}
+lambda_values <- c(1, 5, 10, 50, 75)
+data <- data.frame()
+
+for(x in lambda_values) {
+  draws <- rpois(1000, lambda = x)
+  data <- rbind(data, data.frame(lambda = x, value = draws))
+}
+
+ggplot(data, aes(x = value, fill = as.factor(lambda))) +
+  geom_bar(position = "dodge") +
+  labs(title = "Poisson Distribution Draws",
+       x = "Value",
+       y = "Count",
+       fill = "Lambda")
+```
+
+## 11.2.2
+
+Create models that predict `numtot` (sum of sexual partners)
+
+Create dataframe:
+
+```{r}
+df22 <- d |> 
+  mutate(
+    gender = as.factor(ifelse(sex == 1, " male"," female")) |> 
+      relevel(ref=" male"),
+    
+    sexuality = as.factor(case_when(
+      sexornt == 1 ~ " homosexual",
+      sexornt == 2 ~ " bisexual",
+      sexornt == 3 ~ " straight"
+    )) |>  relevel(ref=" straight"),
+    
+    pol = as.factor(case_when(
+      polviews <= 3 ~ " liberal",
+      polviews == 4 ~ " neutral",
+      polviews >= 5 ~ " conservative"
+    )) |>  relevel(ref=" liberal"),
+  ) |> 
+  select(numtot, gender, sexuality, pol, age) |> 
+  filter(numtot <= 900) |> # remove outliers
+  drop_na()
+```
+
+Create models:
+
+```{r}
+nt_mod1 <- glm(numtot ~ gender:pol, 
+               data = df22, family="poisson")
+nt_mod2 <- glm(numtot ~ gender:sexuality, 
+               data = df22, family = "poisson")
+nt_mod3 <- glm(numtot ~ gender + pol + sexuality, 
+               data = df22, family="poisson")
+nt_mod4 <- glm(numtot ~ gender:sexuality + gender:pol, 
+               data = df22, family="poisson")
+
+msummary(list(nt_mod1, nt_mod2, nt_mod3, nt_mod4), output = "gt") |> 
+  opt_table_font(font = "Optima")
+```
+
+Based on this analysis, the model with the lowest AIC and BIC was the fourth, which factored the interaction of gender and sexuality and the interaction of gender and political inclination.
+
+*Interpreting a coefficient:* In model 4, the $$\beta$$ coefficient of gender male x sexuality bisexual 1.125 indicates that bisexual males have $$e^{1.125}=308.02\%$$ more total sexual partners than the reference group, straight females.
+
+## 11.2.3
+
+Predict `sibs`.
+
+```{r}
+df23 <- d |> 
+  mutate(
+    pol = as.factor(case_when(
+      polviews <= 3 ~ " liberal",
+      polviews == 4 ~ " neutral",
+      polviews >= 5 ~ " conservative"
+    )) |> relevel(ref=" liberal"),
+    
+    race_f = as.factor(case_when(
+      race == 1 ~ " white",
+      race == 2 ~ " black",
+      race == 3 ~ " other"
+    )) |> relevel(ref=" white"),
+    
+    pahs = ifelse(padeg == 0, F, T),
+    mahs = ifelse(madeg == 0, F, T),
+  ) |> 
+  select(sibs, pol, race_f, pahs, mahs) |> 
+  drop_na()
+```
+
+bob
+
+```{r}
+s_mod1 = glm(sibs ~ pol + race_f, 
+             data=df23, family="poisson")
+s_mod2 = glm(sibs ~ pol:race_f, 
+             data=df23, family="poisson")
+s_mod3 = glm(sibs ~ pahs + mahs,
+             data=df23, family="poisson")
+s_mod4 = glm(sibs ~ pahs + mahs + race_f,
+             data=df23, family="poisson")
+
+msummary(list(s_mod1, s_mod2, s_mod3, s_mod4), output = "gt") |> 
+  opt_table_font(font = "Optima")
+```
+
+Model 4, which factors in whether father has HS diploma, mother has HS diploma, and race, has the lowest AIC and BIC values.
+
+*Interpreting a coefficient:* In Model 4, mahsTRUE's coefficient of -.44 indicates that respondents who's mother had a high school degree had $$e^{-.44}=64.4\%$$ fewer siblings.
