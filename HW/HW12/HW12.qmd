@@ -1,0 +1,280 @@
+---
+title: "HW12"
+author: "Ben Rochford"
+format: html
+editor: visual
+---
+
+# Homework 12: General Linear Models
+
+```{r}
+library(tidyverse)
+library(ggthemes)
+theme_set(theme_few(base_family = "Optima"))
+```
+
+## 12.1.4
+
+Plotting the formulas that comprise the normal distribution
+
+```{r}
+# (x - mu)^2
+ggplot() + xlim(-5, 5) + 
+  geom_function(fun = \(x) (x)^2) + labs(x = "x", y = "f(x)")
+
+# -(x - mu)^2
+ggplot() + xlim(-5, 5) + 
+  geom_function(fun = \(x) -(x)^2) + labs(x = "x", y = "f(x)")
+
+# e^(-(x - mu)^2)
+ggplot() + xlim(-5, 5) + 
+  geom_function(fun = \(x) exp(-(x)^2)) + labs(x = "x", y = "f(x)")
+```
+
+## 12.1.5
+
+Understanding the job of $\sqrt{\pi}$ in the normal distribution
+
+```{r}
+sqrt(pi)
+```
+
+```{r}
+ggplot() + xlim(-5, 5) + 
+  geom_function(fun = \(x) 1/sqrt(pi) * exp(-(x)^2)) + labs(x = "x", y = "f(x)")
+
+integrate(f = \(x) 1/sqrt(pi) * exp(-(x)^2), lower = -Inf, upper = Inf)
+```
+
+Area under the adjusted curve is 1 now.
+
+## 12.1.7
+
+Use a normal linear regression to estimate height from male
+
+```{r}
+library(gssr)
+library(modelsummary)
+library(gt)
+gss18 <- gss_get_yr(2018)
+```
+
+```{r}
+d17 <- gss18 |> 
+  mutate(male = if_else(sex == 1, 1L, 0L)) |> 
+  select(male, height, age) |> drop_na()
+```
+
+```{r}
+m_HM <- glm(height ~ male, data = d17, family = gaussian(link="identity"))
+m_HMA <- glm(height ~ male + age, data = d17, family = gaussian(link="identity"))
+
+msummary(list(m_HM, m_HMA), output = "gt") |> 
+  opt_table_font(font = "Optima")
+```
+
+The intercept of the first model appears to report the average height of a non-male in the sample, about 5 feet 4.4 inches. The coefficient of male is positive, so it implies that the average height of men in the sample is 5.7 inches taller than the average woman.
+
+In the second model, the intercept is not really meaningful, since it is not meaningful to know the height of a non-male with age zero. The coefficient of male is similar to the first model, and the coefficient of age seems to imply that with every increase of age (1 year), there is a reduction of .001 inches in height, based on the sample.
+
+## 12.1.8
+
+```{r}
+d18 <- gss18 |> 
+  mutate(age_squared = age^2) |> 
+  select(coninc, age, age_squared) |> drop_na()
+```
+
+```{r}
+m_cAA2 <- glm(coninc ~ age + age_squared, data = d18, 
+              family = gaussian(link="identity"))
+
+grid18 <- tibble(age = 18:80, age_squared = age^2)
+grid18$pred_income <- predict(m_cAA2, newdata = grid18)
+
+ggplot() + geom_line(aes(x=age, y=pred_income), grid18)
+```
+
+$\beta _0$ here is the intercept term. It's around -15.6k, and since age is associated with a positive increase in income, it's acting as an offset that helps the model fit the incomes of the younger cases in the sample.
+
+## 12.1.9
+
+Center on the mean and fit model again:
+
+```{r}
+d19 <- gss18 |> 
+  mutate(age_centered = age - mean(age, na.rm = TRUE)) |> 
+  mutate(age_squared = age_centered^2) |> 
+  select(coninc, age_centered, age_squared) |> drop_na()
+```
+
+```{r}
+m_19 <- glm(coninc ~ age_centered + age_squared, data = d19, 
+              family = gaussian(link="identity"))
+
+msummary(list(m_cAA2, m_19), output = "gt") |> 
+  opt_table_font(font = "Optima")
+```
+
+With this updated model, the coefficient of age_squared has remained the same, and the direction of the coefficient on age has remained the same, but it had decreased. However, now our intercept value $\beta _0$ has changed to be the mean income of the data, around 58.4k. All evaluation metrics between the old model and the new one are identical.
+
+## 12.1.10
+
+Transform age to units of standard deviations from the mean, and fit model again:
+
+```{r}
+d110 <- gss18 |> 
+  mutate(age_std = (age - mean(age, na.rm = TRUE)) / sd(age, na.rm = TRUE)) |> 
+  mutate(age_squared = age_std^2) |> 
+  select(coninc, age_std, age_squared) |> drop_na()
+```
+
+```{r}
+m_110 <- glm(coninc ~ age_std + age_squared, data = d110, 
+              family = gaussian(link="identity"))
+
+msummary(list(m_cAA2, m_110), output = "gt") |> 
+  opt_table_font(font = "Optima")
+```
+
+Looks like the intercept $\beta _0$ is the mean income value again, but now that we are working in units of standard deviations, the coefficients for the age and age squared predictors are very different. Basically, for every movement of one standard deviation from the mean age at zero, income changes by 3691.36 for the `age` term, and by -8711.33 for the `age_squared` term. As in 12.1.9, the model evaluation figures are identical to the original.
+
+## 12.1.11
+
+Comparisons and Regression.
+
+```{r}
+d111 <- gss18 |> 
+  select(marital, coninc, sex) |> 
+  mutate(
+    coninc = haven::zap_label(coninc),
+    sex = haven::as_factor(sex),
+    marital = haven::as_factor(marital)
+  ) |> 
+  drop_na() |> 
+  mutate(married = if_else(marital == "married", 1L, 0L)) |> 
+  mutate(male = if_else(sex == "male", 1L, 0L))
+
+d111 |> 
+  group_by(married) |> 
+  summarize(
+    avg_coninc = mean(coninc, na.rm = TRUE), 
+    sd = sd(coninc, na.rm = TRUE),
+    n = n()
+  ) |> 
+  mutate(std_error = sd / n())
+```
+
+```{r}
+m_111 <- glm(coninc ~ married, data = d111, 
+             family = gaussian(link="identity"))
+
+msummary(m_111, output = "gt") |> 
+  opt_table_font(font = "Optima")
+```
+
+Note that the coefficients match up with the dplyr table: unmarried's average income is the same as our model's intercept, which makes sense. And, if we add the model's coefficient for married, we get the average income of a married person from the dplyr table, which also makes sense.
+
+Now, to calculate the standard error from the dplyr table:
+
+```{r}
+sqrt((34642.61^2/1229) + (45378.47^2/923))
+```
+
+Comparing this to the standard error of the model's married coefficient 1725, we can see these values are pretty similar.
+
+## 12.1.12
+
+We can reconstruct a 2x2 containing averages with binary interactions.
+
+```{r}
+d111 |> 
+  group_by(male, married) |> 
+  summarize(coninc = mean(coninc, na.rm = TRUE))
+```
+
+```{r}
+m_112 <- glm(coninc ~ male*married, data = d111, 
+             family = gaussian(link="identity"))
+
+msummary(m_112, output = "gt") |> 
+  opt_table_font(font = "Optima")
+```
+
+Based on the coefficient values:
+
+| male | married | coninc   | regression output                       |
+|------|---------|----------|-----------------------------------------|
+| 0    | 0       | 33560.78 | $\beta_0$                               |
+| 0    | 1       | 66759.76 | $\beta_0 + \beta_2$                     |
+| 1    | 0       | 41014.66 | $\beta_0 + \beta_1$                     |
+| 1    | 1       | 68292.14 | $\beta_0 + \beta_1 + \beta_2 + \beta_3$ |
+
+## 12.1.13
+
+```{r}
+data(bikes, package = "bayesrules")
+```
+
+```{r}
+d113 <- bikes |> 
+  mutate(ctr_windspeed = windspeed - mean(windspeed, na.rm=TRUE)) |> 
+  mutate(ctr_temp_feel = temp_feel - mean(temp_feel, na.rm=TRUE)) |> 
+  select(rides, ctr_windspeed, ctr_temp_feel, weekend)
+
+m_113 <- glm(rides ~ ctr_windspeed + ctr_temp_feel + weekend, 
+             data=d113, family = gaussian(link="identity"))
+
+msummary(m_113, output = "gt") |> 
+  opt_table_font(font = "Optima")
+```
+
+Based on our intercepts and coefficients, on a weekday with average temperature and wind speed, the expected ridership is 3683.442. Factoring in the weekendTRUE coefficient of -713.575, we find that the expected ridership on a weekend is instead 2,969.867.
+
+## 12.1.14
+
+Repeat, but use a poisson model
+
+```{r}
+m_114 <- glm(rides ~ ctr_windspeed + ctr_temp_feel + weekend, 
+             data=d113, family = poisson(link="log"))
+
+msummary(m_114, output = "gt") |> 
+  opt_table_font(font = "Optima")
+```
+
+On a weekday of average wind speed and temperature, our intercept shows us the log of the ridership:
+
+$$
+e^{8.175} = 3551.055 \text{ riders}
+$$
+
+If we factor in the coefficient for weekendTRUE, we get the ridership for a weekend day of average wind speed and temperature:
+
+$$
+e^{8.175 - 0.217} = 2,858.351 \text{ riders}
+$$
+
+## 12.1.15
+
+```{r}
+mod_normal <- glm(rides ~ windspeed + temp_feel + weekend, data = bikes, family = "gaussian")
+bikes$resid <- residuals(mod_normal)
+
+bikes |> 
+  ggplot(aes(date, resid)) + 
+  geom_point() +
+  geom_hline(yintercept = 0, linetype = "dashed") + 
+  geom_point(
+    data = filter(bikes, abs(resid) == max(abs(resid))),
+    color = "red", shape = 21, size = 3
+  )
+```
+
+It seems that this model does not fit well because rider behavior has a bit of an inconsistent relationship with our predictor variables over time. At the turn of 2012 is where our model is best fit, and it had to compromise to fit earlier in 2011 and up to 2013. There are likely variables beyond those which we have included in the model which are somehow impacting ridership. Perhaps something like the availability of other public transport, for instance.
+
+```{r}
+filter(bikes, abs(resid) == max(abs(resid)))
+```
+
+This is when Hurricane Sandy hit DC. As a result, the wind speed is crazy and the model is just not fit for such an outlier.
